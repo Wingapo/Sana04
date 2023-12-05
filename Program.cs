@@ -2,7 +2,7 @@
 {
     private static void Main(string[] args)
     {
-        int rows, cols, value;
+        int rows, cols;
         Random random = new();
 
         Console.WriteLine("Enter sizes for 2d array: ");
@@ -12,15 +12,17 @@
             
         int[,] array = new int[rows, cols];
 
-        Generate2dArray(array, random, -2, 11);
+        Generate2dArray(array, random, -10, 10);
         Console.WriteLine("\nGenerated 2d array:");
         Print2dArray(array);
+
+        int? value;
 
         Console.WriteLine("\nNumber of positive elements: " + NumberOfPositive(array));
 
         value = MaxValueOccursSeveralTimes(array);
         Console.WriteLine("Max value which occurs several times: " +
-             ((value == int.MinValue) ? "null" : value));
+             ((value == null) ? "null" : value));
 
         Console.WriteLine("Number of rows without zeros: " + RowsWithoutZeros(array));
         Console.WriteLine("Number of columns with zeros: " + ColsWithZeros(array));
@@ -29,15 +31,16 @@
         Console.WriteLine("Product of elements for rows without negative elements:");
         PrintDictionary(ProdOfNonNegativeRows(array), "\trow index ");
 
-        value = MaxDiagonalSumUnderMain(array);
-        Console.WriteLine("Max elements sum of diagonals parallel to main: " + 
-            ((value == int.MinValue) ? "null" : value));
+        value = MaxDiagonalSumParallelToMain(array);
+        Console.WriteLine("Max elements sum of diagonals parallel to main: " +
+            ((value == null) ? "null" : value));
 
         Console.WriteLine("Sum of elements for columns without negative elements:");
         PrintDictionary(SumOfNonNegativeCols(array), "\tcolumn index ");
 
+        value = MinAbsDiagonalSumParallelToSide(array);
         Console.WriteLine("Min elements sum by absolute value of diagonals parallel to side: " +
-            MinAbsDiagonalSumAboveSide(array));
+            ((value == null) ? "null" : value));
 
         Console.WriteLine("Sum of elements for columns with at least one negative element:");
         PrintDictionary(ColSumWithNegative(array), "\tcolumn index ");
@@ -99,7 +102,7 @@
         return count;
     }
 
-    private static int MaxValueOccursSeveralTimes(int[,] array)
+    private static int? MaxValueOccursSeveralTimes(int[,] array)
     {
         int rows = array.GetLength(0), cols = array.GetLength(1);
 
@@ -112,7 +115,7 @@
         for (int i = rows * cols - 1; i > 0; i--)
             if (copy[i] == copy[i - 1]) return copy[i];
 
-        return int.MinValue;
+        return null;
     }
 
     private static int RowsWithoutZeros(int[,] array)
@@ -196,26 +199,39 @@
 
     public static void PrintDictionary(Dictionary<int, int> dict, string keyText = "")
     {
+        if (dict.Count < 1)
+        {
+            Console.WriteLine("null");
+            return;
+        }
+
         foreach (KeyValuePair<int, int> pair in dict)
             Console.WriteLine(keyText + pair.Key + ": " + pair.Value);
     }
 
-    private static int MaxDiagonalSumUnderMain(int[,] array)
+    private static int? MaxDiagonalSumParallelToMain(int[,] array)
     {
         int rows = array.GetLength(0), cols = array.GetLength(1);
 
-        if (rows <= cols) return int.MinValue;
-
-        int max = 0, current;
-        for (int i = 1; i <= rows - cols; i++) {
-            current = 0;
-            for (int j = 0; j < cols; j++)
-                current += array[j + i, j];
-            if (i == 1) max = current;
-            else if (current > max) max = current;
+        int maxAbove = int.MinValue, maxBelow = int.MinValue;
+        int above, below;
+        
+        for (int i = 1; i < cols; i++)
+        {
+            above = 0;
+            for (int j = 0; j < rows && j + i < cols; j++)
+                above += array[j, j + i];
+            if (above > maxAbove) maxAbove = above;
         }
-
-        return max;
+        for (int i = 1; i < rows; i++)
+        {
+            below = 0;
+            for (int j = 0; j < cols && j + i < rows; j++)
+                below += array[j + i, j];
+            if (below > maxBelow) maxBelow = below;
+        }
+        int result = Math.Max(maxBelow, maxAbove);
+        return (result == int.MinValue) ? null : result;
     }
 
     private static Dictionary<int, int> SumOfNonNegativeCols(int[,] array)
@@ -244,21 +260,28 @@
         return result;
     }
 
-    private static int MinAbsDiagonalSumAboveSide(int[,] array)
+    private static int? MinAbsDiagonalSumParallelToSide(int[,] array)
     {
         int rows = array.GetLength(0), cols = array.GetLength(1);
 
-        if (rows <= cols) return -1;
+        int minAbove = int.MaxValue, minBelow = int.MaxValue;
+        int above, below;
 
-        int min = 0, current;
-        for (int i = 1; i <= rows - cols; i++) {
-            current = 0;
-            for (int j = 0; j < cols; j++)
-                current += Math.Abs(array[rows - j - i - 1, j]);
-            if (i == 2) min = current;
-            else if (current < min) min = current;
+        for (int i = rows - 2; i >= 0; i--) {
+            above = 0;
+            for (int j = 0; j < cols && i - j >= 0; j++)
+                above += Math.Abs(array[i - j, j]);
+            if (above < minAbove) minAbove = above;
         }
-        return min;
+        for (int i = 1; i < cols; i++)
+        {
+            below = 0;
+            for (int j = rows - 1; j >= 0 && rows - j - 1 + i < cols; j--)
+                below += Math.Abs(array[j, rows - j - 1 + i]);
+            if (below < minBelow) minBelow = below;
+        }
+        int result = Math.Min(minBelow, minAbove);
+        return (result == int.MaxValue) ? null : result;
     }
 
     private static Dictionary<int, int> ColSumWithNegative(int[,] array)
